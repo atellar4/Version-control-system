@@ -1,0 +1,142 @@
+Gitlet Design Document
+----------------------
+Austin Ralleta
+
+Classes and Data Structures
+---------------------------
+**** Commands ****
+
+This class executes Gitlet commands passed in through the Main class.
+
+** Fields **
+
+1. HashMap<String, String> commitsMap: A map representing the commit hashes.
+2. HashMap<String, String> staged: A map representing the staged files.
+3. HashMap<String, String> markRemoved: A map representing files marked for removal.
+4. HashMap<String, String> track: A map of all tracked files.
+5. ArrayList<String> modsNotStaged: An ArrayList of all modified files not staged.
+6. ArrayList<String> untracked: An ArrayList of all files not tracked.
+
+**** Commit ****
+
+Defines and constructs commit objects.
+
+** Fields **
+
+1. String timestamp: time committed.
+2. String message: commit message.
+3. String commitId: SHA-1 hash of the commit.
+4. String parent: SHA-1 hash of parent commit.
+5. String parentTwo: SHA-1 hash of second parent commit.
+6. HashMap<String, String> tracked: file name as key mapped to SHA-1 hash of file contents.
+7. boolean isMerge: indicates if commit is merge commit.
+8. String branch: name of the commit's branch.
+
+
+Algorithms
+----------
+**** Commands ****
+
+1. init(): Creates a .gitlet directory and also create within .gitlet a blobs directory, branches directory with
+the master branch, a commits directory with the first commit file as well as a hashes file that contains
+the initial commit, a removal directory that stores the removed hashmap, stage directory that stores the staged
+hashmap, and three files called currentbranch, HEAD, and tracked.
+
+2. add(String file): If the file exists, create a hash for the file contents and create a new file in blobs if a file
+with that hash does not exist already. Check the removed hashmap if the file is marked to be removed and delete it from
+the removal directory. Add the file to the staging area after verifying that it's contents are different from what is
+tracked. Replace the file if it's already staged as well as add it to the tracked hashmap.
+
+3. rm(String file): Check if the file is in stage and delete it from the staging area if it is. If the current
+commit is tracking it, delete the file if it exists, add it to the removal directory and remove it from the
+tracked hashmap.
+
+4. commit(String msg): Check that the size of either the stage or the removal area is greater than 0 to know to
+proceed with the commit. Get the tracked hashmap and pass it in to create a new commit object. Update the head by
+using the new commit SHA-1. If the stage hashmap is not empty, clear it. Do the same with the marked for removal
+hashmap if necessary.
+
+5. log(): Use a while loop with the stopping condition being the parent equals null to get all commit information
+going back in time.
+
+6. globalLog(): Get all the commit ids from the keys of the hashes hashset in the commits directory. Use a for each
+loop to iterate through the set and print out the necessary information.
+
+7. find(String message): Get the hashmap of commits and iterate through its values, then return the key (commit id)
+if the message matches the value.
+
+8: status(): Iterate through a list of branches then print them out. Iterate through the list of files in the
+staged directory and the list of files in the removal directory respectively and print them out. Tracked files
+that are deleted or whose contents changed and are not staged are added to an ArrayList that is sorted. Each string
+is then printed out. Files that exist in the working directory but are not tracked are added to a separate ArrayList
+then printed out.
+
+9: branch(String name): The path to that branch file is checked for existence or else it overwrites the HEAD file.
+
+10: rmbranch(String name): Checks if the path to the branch file exists and does not match the contents of the HEAD
+file before deleting the file in the branches directory.
+
+11. checkoutWithin(String id, String filename): If the commit and the file name both exist, get the hash of the file
+from the hashmap of the given commit's tracked files and use it to get the contents of the corresponding blob
+in the blobs directory. The contents will then be used to overwrite the file in the current directory or create it
+if necessary.
+
+12. checkoutBranch(String branchName): Iterates through the hashmap of files tracked by the head of the given branch
+to make sure they are all tracked by the current commit and exist in the working directory. Iterates through all the
+files again to overwrite the files in the current directory or create them if necessary. Iterates through the files
+tracked by the current commit to delete them if they are not in the hashmap of files tracked by the given branch
+head commit.
+
+13. reset(String id): Iterates through the hashmap of files tracked by the given commit to make sure they are
+all tracked by the current commit and exist in the working directory. Iterates through all the files again to
+overwrite the files in the current directory or create them if necessary. Iterates through the files tracked
+by the current commit to delete them if they are not in the hashmap of files tracked by the given branch head commit.
+
+14. splitPoint(Commit current, Commit given): Use a while loop with the stopping condition being the parent is
+null to add commit ids to a hashset, starting with the current commit. Then do the same loop but start with the given
+commit and include the stopping point that the commit id is contained by the hashset to return the ancestor shared
+by both commits.
+
+15. merge(String branchName): Gets all the needed hashmaps and commits by reading from the disk. Iterates through
+a set of key from the hashmap of files tracked by the given branch head to check for untracked files. Use a for each
+loop again to iterate through that same set to and go through a series of if cases to determine whether a file
+should be checked out and staged or if a conflict file should be created. Makes a merge commit the same exact way a
+commit is made above, except for the a specific message indicating what was merged in addition to two parents passed
+into the constructor.
+
+
+Persistence
+-----------
+1. Write the current commit SHA-1 hash to disk by using writeContents on a new file created called HEAD.
+Get the head by using readContentsAsString.
+
+2. Write the name of the current branch to file named currentBranch. Use writeContents to overwrite the branch
+name and use readContentsAsString to get the branch name.
+
+3. Save what's being tracked in the current work directory before the next commit by using writeObject to a
+file named tracked. This contains a hashmap of files to their SHA-1 hashes, which can be extracted by using
+readObject and updated with hashmap methods before being written back to the file.
+
+4. Save the staging area to disk with a directory called stage. Stage contains a file called staged where
+writeObject and readObject can be used to overwrite or get the hashmap of file names to their hashes. Every time
+a file is staged, a new file of the same name with its hash as its contents is created in the stage directory.
+The file is deleted when it is removed from the staging area.
+
+5. Save the files marked for removal to disk with a directory called removal. Removal contains a file called
+removed where writeObject and readObject can be used to overwrite or get the hashmap of file names to their
+hashes. Every time a file is marked for removal, a new file of the same name with its hash as its contents
+is created in the removal directory. The file is deleted when it is unmarked for removal.
+
+6. The branches are saved to disk by creating a new file with its name as the branch in a directory called
+branches. Each file in branches contains the hash of the head commit it points to. This commit it points to
+can be updated using writeContents and retrieved by using readContentsAsString.
+
+7. Write blobs to disk by creating a new file in a directory called blobs with the hash of the file it represents
+as its name and the contents of the file as a byte array is stored inside. Blobs are only created if they do not
+exist yet. If the same blob is shared by multiple files, the hashmap the file is in is mapped to the same hash
+value. Blob files are not deleted in case a file may point to it again in the future.
+
+8. Write commits to disk by creating a new file with the commit id as its name in the directory commits.
+The commit files contains the commit object, written to the file using writeObject and extracted by
+using readObject. Write a hashmap of commit ids and commit messages to file called hashes within commit
+using writeObject and get the hashmap using readObject. This hashmap will keep track of all commits made.
